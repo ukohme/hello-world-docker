@@ -1,0 +1,47 @@
+pipeline {
+   agent any
+   environment 
+    {
+        VERSION = "${BUILD_NUMBER}"
+        PROJECT = 'java-docker-pipeline'
+        ECRURL = 'https://841457446486.dkr.ecr.us-west-1.amazonaws.com/java-docker-pipeline'
+        ECRCRED = 'ecr:us-west-1:aws_docker_user_credentials'
+		dockerImage = ''
+		 
+    }   
+    stages {
+      stage('GetSCM') {
+
+         steps {
+
+            // Get some code from a GitHub repository
+            git branch: 'main', credentialsId: 'githun_credentials', url: 'https://github.com/ukohme/hello-world-docker.git'
+         }
+         }
+         stage('build'){
+             steps{
+                 script{
+                       dockerImage = docker.build("$PROJECT:v${env.BUILD_NUMBER}") 
+					   
+                 }
+             }
+         }
+		 stage('Push Image'){
+         steps{
+             script
+                {
+                    docker.withRegistry(ECRURL, ECRCRED)
+                    {
+                         dockerImage.push()
+                    }
+                }
+            }
+         }
+       stage('remove image'){
+         steps{
+            sh "docker rmi  $PROJECT:v${env.BUILD_NUMBER} "
+        }
+    }
+	}
+	
+}
